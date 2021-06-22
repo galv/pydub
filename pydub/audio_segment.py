@@ -765,8 +765,7 @@ class AudioSegment(object):
 
         p = subprocess.Popen(conversion_command, stdin=stdin_parameter,
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        p_out, p_err = p.communicate(input=stdin_data)
-
+        p_out, p_err = p.communicate(input=stdin_data, timeout=kwargs.get('subprocess_timeout', None))
         if p.returncode != 0 or len(p_out) == 0:
             if close_file:
                 file.close()
@@ -822,7 +821,7 @@ class AudioSegment(object):
         return obj
 
     def export(self, out_f=None, format='mp3', codec=None, bitrate=None, parameters=None, tags=None, id3v2_version='4',
-               cover=None):
+               cover=None, subprocess_timeout=None):
         """
         Export an AudioSegment to a file with given options
 
@@ -855,6 +854,12 @@ class AudioSegment(object):
 
         cover (file)
             Set cover for audio file from image file. (png or jpg)
+
+        subprocess_timeout (integer)
+            Time limit under which the ffmpeg or avconv process should run. If it is
+            exceeded, subprocess.TimeoutError will be raised to the caller. This is
+            helpful when your underlying file system stalls during read or write
+            operations (like gcsfuse).
         """
         id3v2_allowed_versions = ['3', '4']
 
@@ -961,7 +966,7 @@ class AudioSegment(object):
         # read stdin / write stdout
         with open(os.devnull, 'rb') as devnull:
             p = subprocess.Popen(conversion_command, stdin=devnull, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        p_out, p_err = p.communicate()
+        p_out, p_err = p.communicate(timeout=subprocess_timeout)
 
         log_subprocess_output(p_out)
         log_subprocess_output(p_err)
